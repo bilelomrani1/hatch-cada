@@ -42,8 +42,13 @@ class Pyproject:
         return Version(metadata.version)
 
     @property
-    def requirements(self) -> list[Requirement]:
+    def dependencies(self) -> list[Requirement]:
         return [Requirement(dep) for dep in self._content.get("project", {}).get("dependencies", [])]
+
+    @property
+    def optional_dependencies(self) -> dict[str, list[Requirement]]:
+        opt_deps = self._content.get("project", {}).get("optional-dependencies", {})
+        return {group: [Requirement(dep) for dep in deps] for group, deps in opt_deps.items()}
 
     @property
     def members(self) -> list[str]:
