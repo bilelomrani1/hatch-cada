@@ -76,7 +76,17 @@ build-backend = "hatchling.build"
 
 [tool.hatch.version]
 source = "vcs"
-fallback-version = "0.0.0.dev0"
+fallback-version = "0.0.0"
+
+# uv caches package metadata, but with dynamic versioning from git (hatch-vcs),
+# the version changes when git state changes. We must include git commits and 
+# tags in cache keys so uv invalidates the cache appropriately.
+# https://docs.astral.sh/uv/concepts/cache/#dynamic-metadata
+[tool.uv]
+cache-keys = [
+    { file = "pyproject.toml" },
+    { git = { commit = true, tags = true } },
+]
 
 [tool.ruff]
 line-length = 120
