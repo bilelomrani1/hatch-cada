@@ -1,5 +1,7 @@
 # Cada
 
+[![CI](https://github.com/bilelomrani1/hatch-cada/actions/workflows/ci.yml/badge.svg)](https://github.com/bilelomrani1/hatch-cada/actions/workflows/ci.yml) [![Coverage](https://codecov.io/gh/bilelomrani1/hatch-cada/graph/badge.svg)](https://codecov.io/gh/bilelomrani1/hatch-cada) [![PyPI - Version](https://img.shields.io/pypi/v/hatch-cada.svg?logo=pypi&label=PyPI&logoColor=gold)](https://pypi.org/project/hatch-cada/) [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/hatch-cada.svg?logo=python&label=Python&logoColor=gold)](https://pypi.org/project/hatch-cada/) [![License - MIT](https://img.shields.io/badge/license-MIT-9400d3.svg)](https://spdx.org/licenses/MIT.html)
+
 [uv workspaces](https://docs.astral.sh/uv/concepts/workspaces/) are great for developing multiple Python packages together in a monorepo. But uv doesn't currently solve how to _build and publish_ packages that depend on each other.
 
 Cada is a simple [hatchling](https://pypi.org/project/hatchling/) build plugin for uv workspaces. It rewrites workspace dependencies with version constraints at build time, supporting both independent versioning (each package has its own version) and lockstep versioning (all packages share the same version).
