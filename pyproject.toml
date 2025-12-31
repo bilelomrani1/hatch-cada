@@ -45,6 +45,7 @@ test = [
     "hatch-vcs>=0.4.0",
     "uv-dynamic-versioning>=0.6.0",
     "covdefaults>=2.3.0",
+    "tomli-w>=1.0.0",
 ]
 checks = [
     "basedpyright>=1.35.0",
@@ -90,7 +91,6 @@ convention = "google"
 
 [tool.basedpyright]
 typeCheckingMode = "standard"
-ignore = ["tests"]
 
 [tool.deptry.per_rule_ignores]
 DEP002 = ["tomli"]
@@ -101,12 +101,10 @@ plugins = ["covdefaults"]
 source = ["src/", "tests/"]
 
 [tool.coverage.report]
-fail_under = 100
 show_missing = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = ["--cov", "--cov-report=xml"]
 filterwarnings = ["error"]
 xfail_strict = true
 strict_markers = true
@@ -142,7 +140,7 @@ sequence = [
 help = "Set up development environment"
 
 [tool.poe.tasks.test]
-cmd = "pytest"
+cmd = "pytest --cov --cov-report=xml --cov-fail-under=100"
 help = "Run tests"
 
 [tool.poe.tasks.lint]
