@@ -40,9 +40,8 @@ class CadaMetaHook(MetadataHookInterface):
         overrides = {name: Strategy.from_string(value) for name, value in self.config.get("overrides", {}).items()}
 
         pkg_pyproject = Pyproject.load(Path(self.root) / PYPROJECT_NAME)
-        requirements = pkg_pyproject.requirements
-        if not requirements:
-            return
+        dependencies = pkg_pyproject.dependencies
+        optional_dependencies = pkg_pyproject.optional_dependencies
 
         workspace_root = find_workspace_root(Path(self.root))
         if workspace_root is None:
@@ -58,15 +57,28 @@ class CadaMetaHook(MetadataHookInterface):
         lockfile = Lockfile.load(workspace_root / UV_LOCKFILE_NAME)
         member_patterns = workspace_pyproject.members
 
-        new_deps: list[str] = []
-        for req in requirements:
-            pkg = lockfile.get_package(req.name)
-            if pkg.editable_path and any(fnmatch(pkg.editable_path, pattern) for pattern in member_patterns):
-                strategy = overrides.get(req.name, default_strategy)
-                req.specifier = strategy.make_specifier(pkg.version)
-            new_deps.append(str(req))
+        if dependencies:
+            new_deps: list[str] = []
+            for req in dependencies:
+                pkg = lockfile.get_package(req.name)
+                if pkg.editable_path and any(fnmatch(pkg.editable_path, pattern) for pattern in member_patterns):
+                    strategy = overrides.get(req.name, default_strategy)
+                    req.specifier = strategy.make_specifier(pkg.version)
+                new_deps.append(str(req))
+            metadata["dependencies"] = new_deps
 
-        metadata["dependencies"] = new_deps
+        if optional_dependencies:
+            new_opt_deps: dict[str, list[str]] = {}
+            for group, reqs in optional_dependencies.items():
+                new_group_deps: list[str] = []
+                for req in reqs:
+                    pkg = lockfile.get_package(req.name)
+                    if pkg.editable_path and any(fnmatch(pkg.editable_path, pattern) for pattern in member_patterns):
+                        strategy = overrides.get(req.name, default_strategy)
+                        req.specifier = strategy.make_specifier(pkg.version)
+                    new_group_deps.append(str(req))
+                new_opt_deps[group] = new_group_deps
+            metadata["optional-dependencies"] = new_opt_deps
 
 
 @hookimpl

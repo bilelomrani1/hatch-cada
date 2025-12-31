@@ -79,7 +79,7 @@ class TestRequirements:
 
         pyproject = Pyproject.load(pyproject_path)
 
-        assert pyproject.requirements == [Requirement("requests>=2.0"), Requirement("click")]
+        assert pyproject.dependencies == [Requirement("requests>=2.0"), Requirement("click")]
 
     def test_returns_empty_list_when_no_dependencies(self, tmp_path: Path) -> None:
         pyproject_path = tmp_path / "pyproject.toml"
@@ -87,7 +87,7 @@ class TestRequirements:
 
         pyproject = Pyproject.load(pyproject_path)
 
-        assert pyproject.requirements == []
+        assert pyproject.dependencies == []
 
 
 class TestMembers:
