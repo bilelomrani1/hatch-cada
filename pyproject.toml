@@ -1,0 +1,178 @@
+[project]
+name = "hatch-cada"
+description = "Hatchling plugin for uv workspaces with independently publishable packages"
+readme = "README.md"
+authors = [{ name = "Bilel Omrani", email = "bilelomrani1@gmail.com" }]
+maintainers = [{ name = "Bilel Omrani", email = "bilelomrani1@gmail.com" }]
+requires-python = ">=3.10"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Software Development :: Build Tools",
+    "Typing :: Typed",
+]
+keywords = [
+    "build",
+    "dependency",
+    "hatch",
+    "packaging",
+    "plugin",
+    "publishing",
+    "release",
+    "versioning",
+]
+dynamic = ["version"]
+dependencies = [
+    "tomli; python_version < '3.11'",
+    "hatchling>=1.28.0",
+    "packaging>=25.0",
+]
+
+[dependency-groups]
+test = [
+    "pytest>=9.0.0",
+    "pytest-sugar>=1.0.0",
+    "pytest-cov>=6.0.0",
+    "hatch-vcs>=0.4.0",
+    "uv-dynamic-versioning>=0.6.0",
+    "covdefaults>=2.3.0",
+]
+checks = [
+    "basedpyright>=1.35.0",
+    "deptry>=0.24.0",
+    "ruff>=0.14.0",
+    "typing-extensions; python_version < '3.11'",
+]
+dev = [
+    { include-group = "checks" },
+    { include-group = "test" },
+    "poethepoet>=0.36.0",
+    "pre-commit>=4.5.1",
+    "python-semantic-release>=10.5.3",
+]
+
+[project.urls]
+Homepage = "https://github.com/bilelomrani1/hatch-cada"
+Repository = "https://github.com/bilelomrani1/hatch-cada"
+Issues = "https://github.com/bilelomrani1/hatch-cada/issues"
+Changelog = "https://github.com/bilelomrani1/hatch-cada/blob/main/CHANGELOG.md"
+
+[project.entry-points.hatch]
+cada = "hatch_cada.hook"
+
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "vcs"
+fallback-version = "0.0.0.dev0"
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+preview = true
+select = ["D", "E", "F", "W", "I", "N", "DOC", "T100"]
+ignore = ["D100", "D101", "D102", "D103", "D104", "D105", "D106", "D107"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.basedpyright]
+typeCheckingMode = "standard"
+ignore = ["tests"]
+
+[tool.deptry.per_rule_ignores]
+DEP002 = ["tomli"]
+DEP004 = ["typing_extensions"]
+
+[tool.coverage.run]
+plugins = ["covdefaults"]
+source = ["src/", "tests/"]
+
+[tool.coverage.report]
+fail_under = 100
+show_missing = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ["--cov", "--cov-report=xml"]
+filterwarnings = ["error"]
+xfail_strict = true
+strict_markers = true
+
+[tool.semantic_release]
+build_command = "uv build"
+commit_message = "chore(release): release v{version} [skip ci]"
+major_on_zero = false
+allow_zero_version = true
+
+[tool.semantic_release.remote]
+type = "github"
+ignore_token_for_push = true
+
+[tool.semantic_release.commit_parser_options]
+minor_tags = ["feat"]
+patch_tags = ["fix"]
+allowed_tags = ["feat", "fix"]
+parse_squash_commits = false
+ignore_merge_commits = true
+
+[tool.semantic_release.changelog]
+template_dir = ".psr-conventional-changelog-template/src/psr_templates/templates"
+
+[tool.semantic_release.changelog.environment]
+extensions = ["psr_templates.ext:GitHubUsernameExtension"]
+
+[tool.poe.tasks.setup]
+sequence = [
+    { cmd = "uv sync --group dev" },
+    { cmd = "pre-commit install --install-hooks" },
+]
+help = "Set up development environment"
+
+[tool.poe.tasks.test]
+cmd = "pytest"
+help = "Run tests"
+
+[tool.poe.tasks.lint]
+sequence = [{ cmd = "deptry src/" }, { cmd = "ruff check ." }]
+help = "Run linter"
+
+[tool.poe.tasks."lint:fix"]
+cmd = "ruff check . --fix"
+help = "Run linter with auto-fix"
+
+[tool.poe.tasks.format]
+cmd = "ruff format ."
+help = "Format code"
+
+[tool.poe.tasks."format:check"]
+cmd = "ruff format . --check"
+help = "Check code formatting"
+
+[tool.poe.tasks.typecheck]
+cmd = "basedpyright"
+help = "Run type checker"
+
+[tool.poe.tasks."lock:check"]
+cmd = "uv lock --check"
+help = "Check lockfile is up to date"
+
+[tool.poe.tasks.check]
+sequence = ["lock:check", "lint", "format:check", "typecheck"]
+help = "Run all checks"
+
+[tool.poe.tasks.release]
+shell = "gh workflow run release.yml && gh run watch $(gh run list --workflow=release.yml --limit=1 --json databaseId --jq '.[0].databaseId')"
+help = "Trigger release workflow on GitHub"

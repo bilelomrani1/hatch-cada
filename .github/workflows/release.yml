@@ -1,0 +1,95 @@
+name: Release
+
+on:
+  workflow_dispatch:
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      released: ${{ steps.release.outputs.released }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ssh-key: ${{ secrets.DEPLOY_KEY }}
+
+      - name: Checkout psr-conventional-changelog-template
+        uses: actions/checkout@v6
+        with:
+          repository: bilelomrani1/psr-conventional-changelog-template
+          path: .psr-conventional-changelog-template
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: |
+          uv sync --group dev
+          uv pip install .psr-conventional-changelog-template
+
+      - name: Run semantic-release
+        id: release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GIT_COMMIT_AUTHOR: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
+        run: |
+          set +e
+          uv run semantic-release --strict version --skip-build
+          exit_code=$?
+          set -e
+          if [ $exit_code -eq 0 ]; then
+            echo "released=true" >> $GITHUB_OUTPUT
+            echo "tag=$(git describe --tags --abbrev=0)" >> $GITHUB_OUTPUT
+          elif [ $exit_code -eq 2 ]; then
+            echo "released=false" >> $GITHUB_OUTPUT
+          else
+            exit $exit_code
+          fi
+
+      - name: Build package
+        if: steps.release.outputs.released == 'true'
+        run: uv build
+
+      - name: Publish to GitHub release
+        if: steps.release.outputs.released == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: uv run semantic-release publish --tag ${{ steps.release.outputs.tag }}
+
+      - name: Upload artifacts
+        if: steps.release.outputs.released == 'true'
+        uses: actions/upload-artifact@v6
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    name: Publish to PyPI
+    runs-on: ubuntu-latest
+    needs: release
+    if: needs.release.outputs.released == 'true'
+    environment:
+      name: pypi
+      url: https://pypi.org/project/hatch-cada/
+    permissions:
+      id-token: write
+
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v7
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          print-hash: true

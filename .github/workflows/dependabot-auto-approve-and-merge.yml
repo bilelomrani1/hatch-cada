@@ -1,0 +1,36 @@
+name: Dependabot auto-approve & auto-merge
+
+on: pull_request
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  dependabot:
+    name: Auto-approve & auto-merge
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    steps:
+      - name: Dependabot metadata
+        id: dependabot-metadata
+        uses: dependabot/fetch-metadata@v2
+
+      - name: Checkout project
+        uses: actions/checkout@v6
+
+      - name: Enable auto-merge for Dependabot PRs
+        if: steps.dependabot-metadata.outputs.package-ecosystem != 'github_actions'
+        run: gh pr merge --auto --squash --delete-branch --subject "$PR_TITLE" --body "" "$PR_URL"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Approve PR
+        run: |
+          gh pr checkout "$PR_URL"
+          gh pr review --approve "$PR_URL"
+        env:
+          PR_URL: ${{github.event.pull_request.html_url}}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

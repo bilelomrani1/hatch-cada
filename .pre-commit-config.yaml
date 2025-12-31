@@ -1,0 +1,41 @@
+default_install_hook_types:
+  - pre-commit
+  - post-checkout
+  - post-merge
+  - post-rewrite
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: no-commit-to-branch
+        args: [--branch, main]
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-ast
+      - id: check-toml
+      - id: check-yaml
+      - id: check-json
+      - id: debug-statements
+      - id: check-added-large-files
+      - id: check-merge-conflict
+
+  - repo: https://github.com/astral-sh/uv-pre-commit
+    rev: 0.9.20
+    hooks:
+      - id: uv-sync
+        name: uv sync after checkout/pull/rebase
+        args: ["--locked", "--group", "dev"]
+      - id: uv-lock
+        files: "(pyproject\\.toml|uv\\.lock)$"
+
+  - repo: local
+    hooks:
+      - id: post-checkout-precommit-install
+        name: Reinstall pre-commit hooks when config changes
+        entry: pre-commit
+        args: ["install"]
+        language: system
+        files: "\\.pre-commit-config\\.yaml$"
+        pass_filenames: false
+        stages: [post-checkout, post-merge, post-rewrite]

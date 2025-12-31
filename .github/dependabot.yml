@@ -1,0 +1,39 @@
+version: 2
+
+multi-ecosystem-groups:
+  python:
+    schedule:
+      interval: "weekly"
+    labels:
+      - dependencies
+    assignees:
+      - bilelomrani1
+    commit-message:
+      prefix: "chore"
+      prefix-development: "chore"
+      include: "scope"
+
+updates:
+  - package-ecosystem: "pip"
+    directory: "/"
+    multi-ecosystem-group: python
+    patterns: ["*"]
+    versioning-strategy: increase-if-necessary
+
+  - package-ecosystem: "uv"
+    directory: "/"
+    multi-ecosystem-group: python
+    patterns: ["*"]
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels:
+      - dependencies
+    assignees:
+      - bilelomrani1
+    commit-message:
+      prefix: "chore"
+      prefix-development: "chore"
+      include: "scope"

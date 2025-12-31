@@ -1,0 +1,103 @@
+name: Setup Auto-Merge with Release Notes
+
+on:
+  pull_request:
+    types:
+      - opened
+      - edited
+      - synchronize
+      - reopened
+      - ready_for_review
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  setup-auto-merge:
+    name: Setup auto-merge
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.user.login != 'dependabot[bot]'
+    steps:
+      - name: Extract Release Notes
+        id: extract
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const prBody = context.payload.pull_request.body || '';
+            const prTitle = context.payload.pull_request.title;
+            const prNumber = context.payload.pull_request.number;
+
+            // Extract content between markers
+            const startMarker = '<!-- RELEASE_NOTE:START -->';
+            const endMarker = '<!-- RELEASE_NOTE:END -->';
+
+            const startIndex = prBody.indexOf(startMarker);
+            const endIndex = prBody.indexOf(endMarker);
+
+            let releaseNote = '';
+
+            if (startIndex !== -1 && endIndex !== -1 && endIndex > startIndex) {
+              // Extract the content between markers
+              releaseNote = prBody.substring(startIndex + startMarker.length, endIndex);
+
+              // Strip trailing whitespace from each line
+              releaseNote = releaseNote
+                .split('\n')
+                .map(line => line.trimEnd())
+                .join('\n');
+
+              // Trim leading and trailing empty lines
+              releaseNote = releaseNote.replace(/^\s*\n+/, '').replace(/\n+\s*$/, '');
+            }
+
+            // Append PR number and author to title
+            const titleWithNumber = `${prTitle} (#${prNumber})`;
+
+            // Set outputs
+            core.setOutput('release_note', releaseNote);
+            core.setOutput('pr_title', titleWithNumber);
+            core.setOutput('has_release_note', releaseNote.length > 0 ? 'true' : 'false');
+
+            // Log for debugging
+            console.log('PR Title:', titleWithNumber);
+            console.log('Release Note Length:', releaseNote.length);
+            console.log('Release Note Content:', releaseNote);
+
+      - name: Enable Auto-Merge
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          PR_TITLE: ${{ steps.extract.outputs.pr_title }}
+          RELEASE_NOTE: ${{ steps.extract.outputs.release_note }}
+        run: |
+          # Construct commit message
+          if [ -n "$RELEASE_NOTE" ]; then
+            COMMIT_BODY="$RELEASE_NOTE"
+          else
+            COMMIT_BODY=""
+          fi
+
+          # Enable auto-merge with squash and delete branch after merge
+          gh pr merge --auto --squash --delete-branch --subject "$PR_TITLE" --body "$COMMIT_BODY" "$PR_URL"
+
+          echo "✓ Auto-merge enabled successfully"
+          echo "Commit subject: $PR_TITLE"
+          echo "Commit body length: ${#COMMIT_BODY}"
+
+      - name: Add PR Comment
+        uses: marocchino/sticky-pull-request-comment@v2
+        if: always()
+        with:
+          header: auto-merge-status
+          message: |
+            Hey there and thank you for opening this pull request! 👋🏼
+
+            Auto-merge has been enabled with squash commit. Once all checks pass and approvals are met, this PR will be automatically merged.
+
+            **Commit message preview:**
+
+            ${{ steps.extract.outputs.pr_title }}
+            ${{ steps.extract.outputs.has_release_note == 'true' && format('
+
+            {0}', steps.extract.outputs.release_note) || '' }}
