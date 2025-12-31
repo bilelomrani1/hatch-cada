@@ -66,7 +66,7 @@ jobs:
 
       - name: Enable Auto-Merge
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
           PR_URL: ${{ github.event.pull_request.html_url }}
           PR_TITLE: ${{ steps.extract.outputs.pr_title }}
           RELEASE_NOTE: ${{ steps.extract.outputs.release_note }}
