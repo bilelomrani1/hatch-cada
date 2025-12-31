@@ -1,14 +1,18 @@
 # Cada
 
-[uv workspaces](https://docs.astral.sh/uv/concepts/workspaces/) are great for developing multiple Python packages together in a monorepo. But uv doesn't currently solve how to *build and publish* packages that depend on each other.
+[uv workspaces](https://docs.astral.sh/uv/concepts/workspaces/) are great for developing multiple Python packages together in a monorepo. But uv doesn't currently solve how to _build and publish_ packages that depend on each other.
 
-Cada is a simple [hatchling](https://pypi.org/project/hatchling/) build plugin for uv workspaces. It rewrites workspace dependencies with version constraints at build time, so each package can be published independently.
+Cada is a simple [hatchling](https://pypi.org/project/hatchling/) build plugin for uv workspaces. It rewrites workspace dependencies with version constraints at build time, supporting both independent versioning (each package has its own version) and lockstep versioning (all packages share the same version).
 
-## Table of contents  <!-- omit in toc -->
+## Table of contents <!-- omit in toc -->
 
 - [Why?](#why)
 - [Quickstart](#quickstart)
 - [Configuration](#configuration)
+- [Monorepo versioning strategies](#monorepo-versioning-strategies)
+  - [Lockstep versioning](#lockstep-versioning)
+  - [Independent versioning](#independent-versioning)
+  - [Deriving versions from git tags](#deriving-versions-from-git-tags)
 - [Comparison with other plugins](#comparison-with-other-plugins)
   - [Una](#una)
   - [hatch-dependency-coversion](#hatch-dependency-coversion)
@@ -18,33 +22,79 @@ Cada is a simple [hatchling](https://pypi.org/project/hatchling/) build plugin f
 
 ## Why?
 
-In a monorepo, you shouldn't have to manually track version constraints for internal dependencies. Each package defines its own version, either in `project.version` or derived from VCS tags. At build time, Cada reads these versions and generates constraints based on a compatibility strategy you choose. You focus on code, not version bookkeeping.
-
-Suppose you have a monorepo managed by a uv workspace with internal libraries that depend on each other:
+Suppose you have a uv workspace with packages that depend on each other:
 
 ```toml
+# packages/my-core/pyproject.toml
+[project]
+name = "my-core"
+version = "2.0.0"
+```
+
+```toml
+# packages/my-client/pyproject.toml
 [project]
 name = "my-client"
+version = "1.0.0"
 dependencies = ["my-core"]
 
 [tool.uv.sources]
 my-core = { workspace = true }
 ```
 
-This works great for local development. But when you build `my-client`, the resulting wheel depends on `my-core` with no version constraint, which might not be desirable.
+This works for local development. But when you build `my-client`, the resulting wheel depends on `my-core` with no version constraint: pip will install whatever version it finds.
 
-Cada solves this by generating version constraints at build time:
+Cada generates version constraints at build time:
 
-```
+```text
 my-core-2.0.0.whl
 my-client-1.0.0.whl   # depends on my-core>=2.0.0
 ```
 
-Each package keeps its own version and release cycle. Users only install what they need. Update `my-core` and consumers of `my-client` get it transitively ie. no new `my-client` release is required.
+Each package keeps its own version and release cycle. When you release a new `my-core`, existing `my-client` releases already accept it via their `>=` constraint: **no cascade of releases needed**.
+
+Whether versions come from `project.version` or VCS tags, Cada reads them and generates constraints based on the compatibility strategy you choose. You focus on code, not version bookkeeping.
 
 ## Quickstart
 
-Add Cada to your build dependencies in each package that has workspace dependencies:
+Here's a complete minimal workspace setup:
+
+```text
+my-monorepo/
+├── pyproject.toml
+├── packages/
+│   ├── my-core/
+│   │   └── pyproject.toml
+│   └── my-client/
+│       └── pyproject.toml
+```
+
+**Root `pyproject.toml`** — defines the workspace:
+
+```toml
+[project]
+name = "my-monorepo"
+version = "0.0.0"
+requires-python = ">=3.12"
+
+[tool.uv.workspace]
+members = ["packages/*"]
+```
+
+**`packages/my-core/pyproject.toml`**:
+
+```toml
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "my-core"
+version = "2.0.0"
+requires-python = ">=3.12"
+```
+
+**`packages/my-client/pyproject.toml`** — uses Cada to resolve workspace dependencies at build time:
 
 ```toml
 [build-system]
@@ -53,7 +103,10 @@ build-backend = "hatchling.build"
 
 [project]
 name = "my-client"
+version = "1.0.0"
+requires-python = ">=3.12"
 dependencies = ["my-core"]
+dynamic = ["license-files"]
 
 [tool.uv.sources]
 my-core = { workspace = true }
@@ -68,24 +121,29 @@ strategy = "allow-all-updates"
 > [!WARNING]
 > On current versions of hatchling, metadata hooks only run when `project.dynamic` is non-empty. If you're not using dynamic fields like `dynamic = ["version"]`, add `dynamic = ["license-files"]` as a workaround. See [pypa/hatch#2153](https://github.com/pypa/hatch/issues/2153) for details.
 
-Then build using your usual build frontend (uv, hatch, etc.):
+Build using your usual build frontend:
 
 ```bash
 uv build packages/my-client
 ```
 
-The built wheel will have proper version constraints for all workspace dependencies.
+Verify the constraint was added by inspecting the wheel metadata:
+
+```bash
+unzip -p dist/my_client-1.0.0-py3-none-any.whl 'my_client-1.0.0.dist-info/METADATA' | grep Requires-Dist
+# Requires-Dist: my-core>=2.0.0
+```
 
 ## Configuration
 
-Add the following to your `pyproject.toml`:
+The `strategy` option controls how version constraints are generated for workspace dependencies.
 
 ```toml
 [tool.hatch.metadata.hooks.cada]
-strategy = "allow-all-updates"
+strategy = "..."
 ```
 
-The `strategy` option controls how version constraints are generated for workspace dependencies. If `my-core` is at version `1.2.3`:
+If `my-core` is at version `1.2.3`:
 
 - **`allow-all-updates`** generates `my-core>=1.2.3`. This is the most common choice for libraries.
 
@@ -110,27 +168,224 @@ my-utils = "semver"
 
 With this configuration, `my-core` will be pinned to its exact version, `my-utils` will use semver-aware constraints, and all other workspace dependencies will use the default `allow-all-updates` strategy.
 
+## Monorepo versioning strategies
+
+Choosing a versioning strategy involves two decisions:
+
+1. **How packages are versioned** — either shared or independent versions
+2. **How Cada generates dependency constraints** — via the `strategy` option
+
+| Approach    | Package versions                          | Cada strategy              | Constraint       |
+| ----------- | ----------------------------------------- | -------------------------- | ---------------- |
+| Lockstep    | All packages share one version            | `pin`                      | `==1.2.3`        |
+| Independent | Each package has its own version          | Any other (e.g., `semver`) | `>=1.2.3,<2.0.0` |
+
+### Lockstep versioning
+
+All packages share the same version number and release together.
+
+**Setup:**
+
+- Set the same `project.version` in all packages
+- Use the `pin` strategy so dependencies require exact versions
+
+```toml
+[tool.hatch.metadata.hooks.cada]
+strategy = "pin"
+```
+
+Building produces `my-core-1.2.0.whl` and `my-client-1.2.0.whl`, where `my-client` depends on `my-core==1.2.0`.
+
+**Pros:**
+
+- Simple to manage (one version number, one tag)
+
+**Cons:**
+
+- Must release all packages even when only one changes
+- Users may receive irrelevant new versions of packages with no actual changes, just a version bump to stay in sync
+- Doesn't scale well if packages have very different release cadences
+
+### Independent versioning
+
+Each package has its own version and release cycle.
+
+**Setup:**
+
+- Set different `project.version` values per package
+- Use a non-pinning strategy so downstream packages accept new releases
+
+```toml
+[tool.hatch.metadata.hooks.cada]
+strategy = "allow-all-updates"
+```
+
+When you release `my-core@2.4.0`, existing `my-client` releases already accept it via their `>=2.3.0` constraint: **no cascade of releases needed**.
+
+**Pros:**
+
+- Packages release on their own schedule
+- Avoids cascading releases when a change isn't relevant to all consumers
+- Users only install and update what they need
+
+**Cons:**
+
+- More complex to manage (multiple version numbers, tag conventions)
+
+### Deriving versions from git tags
+
+The examples above assume versions are statically set in `project.version`. For fully automated versioning, combine Cada with [hatch-vcs](https://github.com/ofek/hatch-vcs) to derive versions from git tags. Tag a commit, and both the package version and its dependency constraints are derived automatically at build time.
+
+> [!NOTE]
+> In a monorepo, each package's `pyproject.toml` lives in a subdirectory while `.git` is at the root. The `search_parent_directories = true` option tells hatch-vcs to look in parent directories for the git repository.
+
+<details>
+<summary><strong>hatch-vcs setup for lockstep versioning</strong></summary>
+
+Use regular git tags (e.g., `v1.2.0`). All packages derive their version from the same tag:
+
+```toml
+# packages/my-core/pyproject.toml
+[project]
+name = "my-core"
+dynamic = ["version"]
+
+[build-system]
+requires = ["hatchling", "hatch-vcs", "hatch-cada"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.version.raw-options]
+search_parent_directories = true
+```
+
+```toml
+# packages/my-client/pyproject.toml
+[project]
+name = "my-client"
+dynamic = ["version"]
+dependencies = ["my-core"]
+
+[build-system]
+requires = ["hatchling", "hatch-vcs", "hatch-cada"]
+build-backend = "hatchling.build"
+
+[tool.uv.sources]
+my-core = { workspace = true }
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.version.raw-options]
+search_parent_directories = true
+
+[tool.hatch.metadata.hooks.cada]
+strategy = "pin"
+```
+
+With the tag `v1.2.0`, building both packages produces `my-core-1.2.0.whl` and `my-client-1.2.0.whl`, where `my-client` depends on `my-core==1.2.0`.
+
+</details>
+
+<details>
+<summary><strong>hatch-vcs setup for independent versioning</strong></summary>
+
+To distinguish tags for different packages, use a naming convention that prefixes the version with the package name (e.g., `my-core@1.2.0`, `my-client@0.5.0`). Then configure hatch-vcs with `tag_regex` and `git_describe_command` to match only tags for that specific package:
+
+```toml
+# packages/my-core/pyproject.toml
+[project]
+name = "my-core"
+dynamic = ["version"]
+
+[build-system]
+requires = ["hatchling", "hatch-vcs", "hatch-cada"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "vcs"
+fallback-version = "0.0.0"
+
+[tool.hatch.version.raw-options]
+tag_regex = "^my-core@(?P<version>.*)$"
+search_parent_directories = true
+git_describe_command = [
+    "git",
+    "describe",
+    "--tags",
+    "--long",
+    "--match",
+    "my-core@*",
+]
+```
+
+```toml
+# packages/my-client/pyproject.toml
+[project]
+name = "my-client"
+dynamic = ["version"]
+dependencies = ["my-core"]
+
+[build-system]
+requires = ["hatchling", "hatch-vcs", "hatch-cada"]
+build-backend = "hatchling.build"
+
+[tool.uv.sources]
+my-core = { workspace = true }
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.version.raw-options]
+tag_regex = "^my-client@(?P<version>.*)$"
+search_parent_directories = true
+git_describe_command = [
+    "git",
+    "describe",
+    "--tags",
+    "--long",
+    "--match",
+    "my-client@*",
+]
+
+[tool.hatch.metadata.hooks.cada]
+strategy = "allow-all-updates"
+```
+
+When you build `my-client`, Cada reads `my-core`'s version from its tag and generates the appropriate constraint. For example, with the following tags:
+
+```text
+my-core@2.3.0
+my-client@1.0.0
+```
+
+Building `my-client` produces a wheel with version `1.0.0` that depends on `my-core>=2.3.0`. You can release `my-core@2.4.0` independently: existing `my-client` releases already accept it via their `>=2.3.0` constraint.
+
+</details>
+
 ## Comparison with other plugins
 
 ### Una
 
 [Una](https://github.com/carderne/una) takes a different approach: instead of publishing workspace packages independently, it bundles all workspace dependencies into a single wheel:
 
-```
+```text
 my-client-1.0.0.whl
 ├── my_client/
 └── my_core/       # vendored inside
 ```
 
-Use **Una** when you're building an **application** you deploy yourself (Docker images, Lambda functions, CLI tools). You get a single artifact with everything included ie. no external dependencies to manage at install time.
+Use **Una** when you're building an **application** you deploy yourself (Docker images, Lambda functions, CLI tools). You get a single artifact with everything included—no external dependencies to manage at install time.
 
-Use **Cada** when you're building **libraries for external consumers**. Each package gets its own version and release cycle, and users only install what they need.
+Use **Cada** when you're building **libraries for external consumers**. Users only install what they need.
 
 ### hatch-dependency-coversion
 
-[hatch-dependency-coversion](https://github.com/Opentrons/hatch-plugins/tree/main/hatch-dependency-coversion) rewrites dependency versions to match the *current package's* version. This is useful for lockstep versioning where all packages in a monorepo share the same version number.
+[hatch-dependency-coversion](https://github.com/Opentrons/hatch-plugins/tree/main/hatch-dependency-coversion) rewrites dependency versions to match the _current package's_ version. This is useful for lockstep versioning where all packages in a monorepo share the same version number.
 
-**Cada** is different: it resolves each dependency's version through hatchling's plugin system. This supports independent versioning where each package has its own release cycle, and also works with dynamic versioning plugins like [hatch-vcs](https://github.com/ofek/hatch-vcs).
+**Cada** is different: it resolves each dependency's version through hatchling's plugin system. This is more flexible: it supports lockstep versioning (if you declare the same version in all projects) but also independent versioning where each package has its own version and release cycle.
 
 ### uv-dynamic-versioning
 
@@ -165,7 +420,7 @@ This matters because many tools in the Python ecosystem rely on the standard `pr
 
 - **Monorepo build tools** ([Nx](https://nx.dev/), [Moon](https://moonrepo.dev/), etc.) auto-detect internal dependencies to build task graphs and determine what to rebuild when code changes. Non-standard dependency locations break this detection.
 - **Dependency scanners** ([pip-audit](https://github.com/pypa/pip-audit), [safety](https://github.com/pyupio/safety), etc.) won't detect vulnerabilities and won't be able to rewrite your dependencies if they are in a non-standard location.
-- **Dependency update tools** such as [Dependabot](https://docs.github.com/en/code-security/dependabot) only supports PEP 621 standard locations and has no workaround. [Renovate](https://docs.renovatebot.com/modules/manager/pep621/) can be configured with [custom regex managers](https://docs.renovatebot.com/modules/manager/regex/), but this requires manual setup.
+- **Dependency update tools** like [Dependabot](https://docs.github.com/en/code-security/dependabot) only support PEP 621 standard locations and have no workaround. [Renovate](https://docs.renovatebot.com/modules/manager/pep621/) can be configured with [custom regex managers](https://docs.renovatebot.com/modules/manager/regex/), but this requires manual setup.
 - **Import linters** ([deptry](https://github.com/fpgmaas/deptry)) can't verify imports match declared dependencies
 
 Cada preserves compatibility with these tools out of the box by keeping your `pyproject.toml` structure standard.

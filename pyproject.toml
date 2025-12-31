@@ -1,6 +1,6 @@
 [project]
 name = "hatch-cada"
-description = "Hatchling plugin for uv workspaces with independently publishable packages"
+description = "Hatchling metadata hook that rewrites workspace dependencies with version constraints at build time"
 readme = "README.md"
 authors = [{ name = "Bilel Omrani", email = "bilelomrani1@gmail.com" }]
 maintainers = [{ name = "Bilel Omrani", email = "bilelomrani1@gmail.com" }]
