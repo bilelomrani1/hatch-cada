@@ -6,7 +6,7 @@ authors = [{ name = "Bilel Omrani", email = "bilelomrani1@gmail.com" }]
 maintainers = [{ name = "Bilel Omrani", email = "bilelomrani1@gmail.com" }]
 requires-python = ">=3.10"
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "Operating System :: OS Independent",
     "Programming Language :: Python",
