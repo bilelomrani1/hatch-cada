@@ -38,7 +38,7 @@ class Pyproject:
 
     @property
     def version(self) -> Version:
-        metadata = ProjectMetadata(str(self._path.parent), PluginManager())
+        metadata = ProjectMetadata(str(self._path.parent), PluginManager(), self._content)
         return Version(metadata.version)
 
     @property
