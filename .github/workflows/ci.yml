@@ -1,6 +1,8 @@
 name: CI
 
 on:
+  push:
+    branches: [main]
   pull_request:
     branches: [main]
 
@@ -35,9 +37,15 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: test-report-${{ matrix.python-version }}
-          path: |
-            report.xml
-            coverage.xml
+          path: report.xml
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage.xml
+          flags: python${{ matrix.python-version }}
+          disable_search: true
 
   lint:
     name: Lint
