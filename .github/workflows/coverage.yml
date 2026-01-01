@@ -56,3 +56,5 @@ jobs:
         with:
           files: coverage.xml
           flags: python${{ matrix.python-version }}
+          override_commit: ${{ github.sha }}
+          override_branch: main
