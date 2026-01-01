@@ -24,9 +24,13 @@ jobs:
           pr_number=$(gh api "/repos/${{ github.repository }}/commits/${{ github.sha }}/pulls" --jq '.[0].number')
           echo "PR number: $pr_number"
 
-          # Find the CI workflow run for that PR's head commit
-          run_id=$(gh api "/repos/${{ github.repository }}/actions/workflows/ci.yml/runs?event=pull_request&status=success" \
-            --jq ".workflow_runs[] | select(.pull_requests[].number == $pr_number) | .id" | head -1)
+          # Get the PR's head commit SHA
+          head_sha=$(gh api "/repos/${{ github.repository }}/pulls/$pr_number" --jq '.head.sha')
+          echo "PR head SHA: $head_sha"
+
+          # Find the CI workflow run for that commit
+          run_id=$(gh api "/repos/${{ github.repository }}/actions/workflows/ci.yml/runs?head_sha=$head_sha&status=success" \
+            --jq '.workflow_runs[0].id')
           echo "CI run ID: $run_id"
           echo "run-id=$run_id" >> "$GITHUB_OUTPUT"
 
