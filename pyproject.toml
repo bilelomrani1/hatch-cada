@@ -152,7 +152,7 @@ sequence = [
 help = "Set up development environment"
 
 [tool.poe.tasks.test]
-cmd = "pytest --cov --cov-report=xml --cov-fail-under=100"
+cmd = "uv run pytest --cov --cov-report=xml --cov-report=term-missing --cov-fail-under=100 --junitxml=report.xml"
 help = "Run tests"
 
 [tool.poe.tasks.lint]

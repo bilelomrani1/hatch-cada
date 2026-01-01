@@ -1,8 +1,6 @@
 name: CI
 
 on:
-  push:
-    branches: [main]
   pull_request:
     branches: [main]
 
@@ -32,11 +30,14 @@ jobs:
       - name: Run tests with coverage
         run: uv run poe test
 
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
+      - name: Upload test results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
         with:
-          files: coverage.xml
-          flags: python${{ matrix.python-version }}
+          name: test-report-${{ matrix.python-version }}
+          path: |
+            report.xml
+            coverage.xml
 
   lint:
     name: Lint
