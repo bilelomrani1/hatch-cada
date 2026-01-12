@@ -2,7 +2,16 @@
 
 <!-- version list -->
 
-## [v1.0.0](https://github.com/bilelomrani1/hatch-cada/compare/v0.1.0...v1.0.0) (2025-12-31)
+## [v1.0.1](https://github.com/bilelomrani1/hatch-cada/compare/v1.0.0...v1.0.1) (2026-01-12)
+### Bug Fixes
+
+- Handle missing packages in lockfile during `uv add` by [@bilelomrani1](https://github.com/bilelomrani1) ([6c06f84](https://github.com/bilelomrani1/hatch-cada/commit/6c06f841320a0270e57c141870de941d88043055)) in [#19](https://github.com/bilelomrani1/hatch-cada/pull/19)
+
+    Fixed `KeyError` when running `uv add`. The metadata hook now gracefully handles packages not
+       yet present in the lockfile.
+
+
+# [v1.0.0](https://github.com/bilelomrani1/hatch-cada/compare/v0.1.0...v1.0.0) (2025-12-31)
 ### Features
 
 - Add support for optional dependencies by [@bilelomrani1](https://github.com/bilelomrani1) ([5f5cf9c](https://github.com/bilelomrani1/hatch-cada/commit/5f5cf9c13157f1fe5bfc8dda10ae9892bc627cca)) in [#2](https://github.com/bilelomrani1/hatch-cada/pull/2)
