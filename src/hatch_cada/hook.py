@@ -61,7 +61,7 @@ class CadaMetaHook(MetadataHookInterface):
             new_deps: list[str] = []
             for req in dependencies:
                 pkg = lockfile.get_package(req.name)
-                if pkg.editable_path and any(fnmatch(pkg.editable_path, pattern) for pattern in member_patterns):
+                if pkg and pkg.editable_path and any(fnmatch(pkg.editable_path, p) for p in member_patterns):
                     strategy = overrides.get(req.name, default_strategy)
                     req.specifier = strategy.make_specifier(pkg.version)
                 new_deps.append(str(req))
@@ -73,7 +73,7 @@ class CadaMetaHook(MetadataHookInterface):
                 new_group_deps: list[str] = []
                 for req in reqs:
                     pkg = lockfile.get_package(req.name)
-                    if pkg.editable_path and any(fnmatch(pkg.editable_path, pattern) for pattern in member_patterns):
+                    if pkg and pkg.editable_path and any(fnmatch(pkg.editable_path, p) for p in member_patterns):
                         strategy = overrides.get(req.name, default_strategy)
                         req.specifier = strategy.make_specifier(pkg.version)
                     new_group_deps.append(str(req))

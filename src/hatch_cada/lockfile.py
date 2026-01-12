@@ -66,20 +66,19 @@ class Lockfile:
     def _packages(self) -> dict:
         return {pkg["name"]: pkg for pkg in self._content.get("package", [])}
 
-    def get_package(self, name: str) -> Package:
+    def get_package(self, name: str) -> Package | None:
         """Get a package from the lockfile.
 
         Args:
             name: The package name to look up.
 
         Returns:
-            The package with resolved version.
-
-        Raises:
-            KeyError: If the package is not found.
+            The package with resolved version, or None if not found.
+            Returns None during `uv add` when the lockfile may not yet
+            contain the package being added.
         """
         entry = self._packages.get(name)
         if entry is None:
-            raise KeyError(f"Package '{name}' not found in lockfile")
+            return None
 
         return Package.from_lock_entry(entry, self._root)

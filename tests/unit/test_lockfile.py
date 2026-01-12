@@ -68,7 +68,7 @@ class TestGetPackage:
 
         assert pkg == Package(name="mylib", version=Version("3.5.0"), editable_path="packages/mylib")
 
-    def test_raises_for_missing_package(self, tmp_path: Path) -> None:
+    def test_returns_none_for_missing_package(self, tmp_path: Path) -> None:
         lock_content = textwrap.dedent("""
             version = 1
 
@@ -81,8 +81,7 @@ class TestGetPackage:
 
         lockfile = Lockfile.load(lock_path)
 
-        with pytest.raises(KeyError, match="Package 'nonexistent' not found"):
-            lockfile.get_package("nonexistent")
+        assert lockfile.get_package("nonexistent") is None
 
     def test_raises_for_package_without_version_or_editable(self, tmp_path: Path) -> None:
         lock_content = textwrap.dedent("""
