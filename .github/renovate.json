@@ -1,8 +1,6 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": ["config:recommended", ":enablePreCommit"],
-  "onboarding": false,
-  "requireConfig": "optional",
   "branchPrefix": "renovate/",
   "labels": ["dependencies"],
   "ignoreDeps": ["python"],
@@ -13,12 +11,11 @@
     "enabled": true,
     "schedule": ["before 5am on tuesday"]
   },
-  "osvVulnerabilityAlerts": true,
-  "commitMessagePrefix": "chore(deps): ",
+    "commitMessagePrefix": "chore(deps): ",
   "commitMessageAction": "bump",
   "packageRules": [
     {
-      "matchManagers": ["pep621", "pip_requirements", "uv"],
+      "matchManagers": ["pep621", "pip_requirements"],
       "groupName": "Python dependencies",
       "commitMessagePrefix": "chore(deps): "
     },
