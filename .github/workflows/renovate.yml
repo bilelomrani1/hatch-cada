@@ -10,6 +10,14 @@ on:
         required: false
         default: false
         type: boolean
+      log-level:
+        description: "Log level (info or debug)"
+        required: false
+        default: "info"
+        type: choice
+        options:
+          - info
+          - debug
 
 jobs:
   renovate:
@@ -29,4 +37,4 @@ jobs:
           RENOVATE_REQUIRE_CONFIG: optional
           RENOVATE_DRY_RUN: ${{ inputs.dry-run && 'full' || 'null' }}
           RENOVATE_REPOSITORY_CACHE: enabled
-          LOG_LEVEL: info
+          LOG_LEVEL: ${{ inputs.log-level || 'info' }}
