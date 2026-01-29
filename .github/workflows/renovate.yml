@@ -25,6 +25,8 @@ jobs:
           token: ${{ secrets.RENOVATE_TOKEN }}
         env:
           RENOVATE_REPOSITORIES: ${{ github.repository }}
+          RENOVATE_ONBOARDING: "false"
+          RENOVATE_REQUIRE_CONFIG: optional
           RENOVATE_DRY_RUN: ${{ inputs.dry-run && 'full' || 'null' }}
           RENOVATE_REPOSITORY_CACHE: enabled
           LOG_LEVEL: info
