@@ -5,6 +5,7 @@
   "labels": ["dependencies"],
   "ignoreDeps": ["python"],
   "rebaseWhen": "behind-base-branch",
+  "prHourlyLimit": 5,
   "schedule": ["before 5am on monday"],
   "minimumReleaseAge": "3 days",
   "lockFileMaintenance": {
