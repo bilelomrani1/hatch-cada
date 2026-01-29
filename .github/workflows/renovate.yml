@@ -18,6 +18,11 @@ on:
         options:
           - info
           - debug
+      force:
+        description: "Force run (ignore schedule)"
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   renovate:
@@ -36,5 +41,6 @@ jobs:
           RENOVATE_ONBOARDING: "false"
           RENOVATE_REQUIRE_CONFIG: optional
           RENOVATE_DRY_RUN: ${{ inputs.dry-run && 'full' || 'null' }}
+          RENOVATE_FORCE: ${{ inputs.force && '{"schedule":null}' || 'null' }}
           RENOVATE_REPOSITORY_CACHE: enabled
           LOG_LEVEL: ${{ inputs.log-level || 'info' }}
