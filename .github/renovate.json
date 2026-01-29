@@ -1,0 +1,37 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", ":enablePreCommit"],
+  "labels": ["dependencies"],
+  "ignoreDeps": ["python"],
+  "rebaseWhen": "behind-base-branch",
+  "schedule": ["before 5am on monday"],
+  "minimumReleaseAge": "3 days",
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 5am on tuesday"]
+  },
+  "osvVulnerabilityAlerts": true,
+  "commitMessagePrefix": "chore(deps): ",
+  "commitMessageAction": "bump",
+  "packageRules": [
+    {
+      "matchManagers": ["pep621", "pip_requirements", "uv"],
+      "groupName": "Python dependencies",
+      "commitMessagePrefix": "chore(deps): "
+    },
+    {
+      "matchManagers": ["github-actions"],
+      "groupName": "GitHub Actions",
+      "commitMessagePrefix": "chore(deps): "
+    },
+    {
+      "matchManagers": ["pre-commit"],
+      "groupName": "pre-commit hooks",
+      "commitMessagePrefix": "chore(deps): "
+    },
+    {
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true
+    }
+  ]
+}

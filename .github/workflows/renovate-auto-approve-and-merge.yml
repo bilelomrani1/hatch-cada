@@ -1,4 +1,4 @@
-name: Dependabot auto-approve & auto-merge
+name: Renovate auto-approve & auto-merge
 
 on: pull_request
 
@@ -7,20 +7,15 @@ permissions:
   pull-requests: write
 
 jobs:
-  dependabot:
+  renovate:
     name: Auto-approve & auto-merge
     runs-on: ubuntu-latest
-    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    if: github.event.pull_request.user.login == 'renovate[bot]'
     steps:
-      - name: Dependabot metadata
-        id: dependabot-metadata
-        uses: dependabot/fetch-metadata@v2
-
       - name: Checkout project
         uses: actions/checkout@v6
 
-      - name: Enable auto-merge for Dependabot PRs
-        if: steps.dependabot-metadata.outputs.package-ecosystem != 'github_actions'
+      - name: Enable auto-merge for Renovate PRs
         run: gh pr merge --auto --squash --delete-branch --subject "$PR_TITLE" --body "" "$PR_URL"
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
@@ -32,5 +27,5 @@ jobs:
           gh pr checkout "$PR_URL"
           gh pr review --approve "$PR_URL"
         env:
-          PR_URL: ${{github.event.pull_request.html_url}}
+          PR_URL: ${{ github.event.pull_request.html_url }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
