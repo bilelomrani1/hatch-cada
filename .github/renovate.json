@@ -15,7 +15,7 @@
   "commitMessageAction": "bump",
   "packageRules": [
     {
-      "matchManagers": ["pep621", "pip_requirements", "uv"],
+      "matchManagers": ["pep621", "pip_requirements"],
       "groupName": "Python dependencies",
       "commitMessagePrefix": "chore(deps): "
     },
