@@ -1,0 +1,29 @@
+name: Renovate
+
+on:
+  schedule:
+    - cron: "0 4 * * 1,2" # Monday & Tuesday 4am UTC
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: "Run in dry-run mode (no PRs created)"
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  renovate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Renovate
+        uses: renovatebot/github-action@v44.2.6
+        with:
+          configurationFile: .github/renovate.json
+          token: ${{ secrets.RENOVATE_TOKEN }}
+        env:
+          RENOVATE_DRY_RUN: ${{ inputs.dry-run && 'full' || 'null' }}
+          RENOVATE_REPOSITORY_CACHE: enabled
+          LOG_LEVEL: info

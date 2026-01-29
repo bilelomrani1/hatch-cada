@@ -1,6 +1,9 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": ["config:recommended", ":enablePreCommit"],
+  "onboarding": false,
+  "requireConfig": "optional",
+  "branchPrefix": "renovate/",
   "labels": ["dependencies"],
   "ignoreDeps": ["python"],
   "rebaseWhen": "behind-base-branch",
