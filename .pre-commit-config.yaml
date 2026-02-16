@@ -21,7 +21,7 @@ repos:
       - id: check-merge-conflict
 
   - repo: https://github.com/astral-sh/uv-pre-commit
-    rev: 0.10.0
+    rev: 0.10.2
     hooks:
       - id: uv-sync
         name: uv sync after checkout/pull/rebase
