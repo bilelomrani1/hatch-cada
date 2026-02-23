@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## [v1.0.2](https://github.com/bilelomrani1/hatch-cada/compare/v1.0.1...v1.0.2) (2026-02-23)
+### Bug Fixes
+
+- Handle directory path dependencies in lockfile by [@bilelomrani1](https://github.com/bilelomrani1) ([6c7a206](https://github.com/bilelomrani1/hatch-cada/commit/6c7a206c22793e8b495bf20ef7c12e955bf55221)) in [#43](https://github.com/bilelomrani1/hatch-cada/pull/43)
+
+    Support `source.directory` (file:// path dependencies) in the lockfile parser. Previously, packages declared as `file://` path dependencies would raise a `KeyError` if their version was omitted from the lockfile.
+
+
 ## [v1.0.1](https://github.com/bilelomrani1/hatch-cada/compare/v1.0.0...v1.0.1) (2026-01-12)
 ### Bug Fixes
 
