@@ -39,12 +39,16 @@ class Package:
             KeyError: If the package has no version and is not editable.
         """
         name = entry["name"]
-        editable_path = entry.get("source", {}).get("editable")
+        source = entry.get("source", {})
+        editable_path = source.get("editable")
+        directory_path = source.get("directory")
 
         if "version" in entry:
             version = Version(entry["version"])
         elif editable_path:
             version = Pyproject.load(root / editable_path / PYPROJECT_NAME).version
+        elif directory_path:
+            version = Pyproject.load(root / directory_path / PYPROJECT_NAME).version
         else:
             raise KeyError(f"Package '{name}' has no version and is not editable")
 

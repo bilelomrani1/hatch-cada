@@ -83,6 +83,33 @@ class TestGetPackage:
 
         assert lockfile.get_package("nonexistent") is None
 
+    def test_returns_package_with_directory_path(self, tmp_path: Path) -> None:
+        pkg_dir = tmp_path / ".." / "extlib"
+        pkg_dir = pkg_dir.resolve()
+        pkg_dir.mkdir(parents=True)
+        (pkg_dir / "pyproject.toml").write_text(
+            textwrap.dedent("""
+                [project]
+                name = "extlib"
+                version = "1.2.3"
+            """)
+        )
+
+        lock_content = textwrap.dedent("""
+            version = 1
+
+            [[package]]
+            name = "extlib"
+            source = { directory = "../extlib" }
+        """)
+        lock_path = tmp_path / "uv.lock"
+        lock_path.write_text(lock_content)
+
+        lockfile = Lockfile.load(lock_path)
+        pkg = lockfile.get_package("extlib")
+
+        assert pkg == Package(name="extlib", version=Version("1.2.3"), editable_path=None)
+
     def test_raises_for_package_without_version_or_editable(self, tmp_path: Path) -> None:
         lock_content = textwrap.dedent("""
             version = 1
