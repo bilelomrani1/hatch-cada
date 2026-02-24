@@ -21,9 +21,25 @@ class WorkspacePackage:
     version: str
     dependencies: list[str] = field(default_factory=list)
     optional_dependencies: dict[str, list[str]] = field(default_factory=dict)
+    dynamic: bool = False
 
     def pyproject(self) -> str:
-        data: dict[str, Any] = {"project": {"name": self.name, "version": self.version}}
+        data: dict[str, Any] = {"project": {"name": self.name}}
+        if self.dynamic:
+            data["project"]["dynamic"] = ["version"]
+            data["project"]["requires-python"] = ">=3.10"
+            data["build-system"] = {
+                "requires": ["hatchling", "hatch-cada"],
+                "build-backend": "hatchling.build",
+            }
+            data["tool"] = {
+                "hatch": {
+                    "version": {"path": "_version.py"},
+                    "metadata": {"hooks": {"cada": {"strategy": "pin"}}},
+                },
+            }
+        else:
+            data["project"]["version"] = self.version
         if self.dependencies:
             data["project"]["dependencies"] = self.dependencies
         if self.optional_dependencies:
@@ -51,7 +67,12 @@ class WorkspaceConfig:
                 [
                     "[[package]]",
                     f'name = "{pkg.name}"',
-                    f'version = "{pkg.version}"',
+                ]
+            )
+            if not pkg.dynamic:
+                lines.append(f'version = "{pkg.version}"')
+            lines.extend(
+                [
                     f'source = {{ editable = "{pkg.name}" }}',
                     "",
                 ]
@@ -82,6 +103,8 @@ def workspace_factory(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Worksp
             pkg_path = workspace_root / pkg.name
             pkg_path.mkdir(parents=True, exist_ok=True)
             (pkg_path / "pyproject.toml").write_text(pkg.pyproject())
+            if pkg.dynamic:
+                (pkg_path / "_version.py").write_text(f'__version__ = "{pkg.version}"\n')
         (workspace_root / "uv.lock").write_text(config.lockfile())
         monkeypatch.setenv("WORKSPACE_ROOT", str(workspace_root))
         return workspace_root
@@ -288,3 +311,35 @@ class TestCadaMetaHook:
         hook.update(metadata)
 
         assert metadata == expected_metadata
+
+    def test_circular_optional_deps_with_dynamic_versions(self, workspace_factory: WorkspaceFactory) -> None:
+        workspace = workspace_factory(
+            WorkspaceConfig(
+                packages=[
+                    WorkspacePackage("pkg-a", "1.0.0", optional_dependencies={"with-b": ["pkg-b"]}, dynamic=True),
+                    WorkspacePackage("pkg-b", "2.0.0", optional_dependencies={"with-a": ["pkg-a"]}, dynamic=True),
+                ]
+            )
+        )
+        hook = create_hook(workspace / "pkg-a", {"strategy": "pin"})
+        metadata: dict[str, Any] = {"name": "pkg-a"}
+
+        hook.update(metadata)
+
+        assert metadata == {"name": "pkg-a", "optional-dependencies": {"with-b": ["pkg-b==2.0.0"]}}
+
+    def test_circular_direct_deps_with_dynamic_versions(self, workspace_factory: WorkspaceFactory) -> None:
+        workspace = workspace_factory(
+            WorkspaceConfig(
+                packages=[
+                    WorkspacePackage("pkg-a", "1.0.0", dependencies=["pkg-b"], dynamic=True),
+                    WorkspacePackage("pkg-b", "2.0.0", dependencies=["pkg-a"], dynamic=True),
+                ]
+            )
+        )
+        hook = create_hook(workspace / "pkg-a", {"strategy": "pin"})
+        metadata: dict[str, Any] = {"name": "pkg-a"}
+
+        hook.update(metadata)
+
+        assert metadata == {"name": "pkg-a", "dependencies": ["pkg-b==2.0.0"]}
