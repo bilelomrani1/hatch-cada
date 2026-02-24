@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## [v1.0.3](https://github.com/bilelomrani1/hatch-cada/compare/v1.0.2...v1.0.3) (2026-02-24)
+### Bug Fixes
+
+- Handle circular workspace dependencies by [@bilelomrani1](https://github.com/bilelomrani1) ([71e6012](https://github.com/bilelomrani1/hatch-cada/commit/71e601214caf8b492108362351826baa0ce98f56)) in [#45](https://github.com/bilelomrani1/hatch-cada/pull/45)
+
+    Fixed `RecursionError` when workspace packages with dynamic versions have circular dependencies and both use hatch-cada.
+
+
 ## [v1.0.2](https://github.com/bilelomrani1/hatch-cada/compare/v1.0.1...v1.0.2) (2026-02-23)
 ### Bug Fixes
 
