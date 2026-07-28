@@ -13,7 +13,7 @@ jobs:
     if: github.event.pull_request.user.login == 'renovate[bot]'
     steps:
       - name: Checkout project
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Enable auto-merge for Renovate PRs
         run: gh pr merge --auto --squash --delete-branch --subject "$PR_TITLE" --body "" "$PR_URL"
